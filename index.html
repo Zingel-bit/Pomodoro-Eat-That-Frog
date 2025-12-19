@@ -36,11 +36,20 @@
     .card h2{font-size:16px;margin:0 0 12px;color:#dbe7ff;}
 
     label{display:block;font-size:13px;color:var(--muted);margin:10px 0 6px;}
-    input[type="text"], select{
+
+    /* ✅ Inputs + Textareas gleich stylen */
+    input[type="text"], textarea, select{
       width:100%; box-sizing:border-box;
       border-radius:12px; border:1px solid var(--line);
       background:rgba(11,15,23,.55); color:var(--text);
       padding:10px 12px; outline:none;
+      font-family: inherit;
+      line-height: 1.35;
+    }
+    textarea{
+      resize: none;             /* clean */
+      min-height: 44px;         /* like input */
+      overflow: hidden;         /* auto-grow */
     }
 
     .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
@@ -257,7 +266,17 @@
       <div class="timerBox" style="margin-top:12px;">
         <div>
           <p class="bigTime" id="timeDisplay">25:00</p>
-          <div class="muted">Shortcuts: <span class="kbd">Space</span> Start/Pause · <span class="kbd">R</span> Reset · <span class="kbd">S</span> Skip</div>
+          <div class="muted">
+            Shortcuts:
+            <span class="kbd">Space</span> Start/Pause ·
+            <span class="kbd">R</span> Reset ·
+            <span class="kbd">S</span> Skip
+            <br>
+            Aufgabenfeld:
+            <span class="kbd">Enter</span> neue Zeile ·
+            <span class="kbd">Esc</span> raus ·
+            <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> neue Aufgabe
+          </div>
         </div>
         <div class="status">
           <small>Status</small>
@@ -309,7 +328,6 @@
   const SHORT_BREAK_SEC = 5 * 60;
   const LONG_BREAK_SEC = 30 * 60;
 
-  // dropdown max (UI)
   const MAX_POMS_PER_TASK = 8;
 
   let plan = [];
@@ -325,7 +343,6 @@
   // Endlosmodus (ohne Plan)
   let endlessMode = false;
 
-  // Debounced persistence
   let saveTimer = null;
   const scheduleSave = () => {
     if (saveTimer) clearTimeout(saveTimer);
@@ -445,12 +462,10 @@
     else el.classList.remove("show");
   }
 
-  // ✅ Empfehlung immer aus Energie (override ändert NICHT die Empfehlung)
   function getEnergyRecommendation(){
     return ENERGY_TO_RECOMMENDED[energyEl.value] ?? 4;
   }
 
-  // ✅ Ziel-Pomodori für Zeitberechnung: override ODER Energie-Empfehlung
   function getTargetPomodoros(){
     const ov = overrideEl.value;
     if(ov) return parseInt(ov,10);
@@ -465,16 +480,32 @@
     return opts;
   }
 
+  function autoGrowTextarea(el){
+    if(!el) return;
+    el.style.height = "auto";
+    el.style.height = (el.scrollHeight) + "px";
+  }
+
+  function focusLastTaskField(){
+    const fields = taskContainer.querySelectorAll("textarea");
+    const last = fields[fields.length - 1];
+    if (last) {
+      last.focus();
+      autoGrowTextarea(last);
+    }
+  }
+
   function createTaskRow({label="", placeholder="", task="", poms=1, locked=false, isFrog=false}){
     const row = document.createElement("div");
     row.className = "taskRow";
     row.dataset.locked = locked ? "1" : "0";
     row.dataset.isFrog = isFrog ? "1" : "0";
 
-    const input = document.createElement("input");
-    input.type = "text";
+    // ✅ textarea statt input: Enter = neue Zeile
+    const input = document.createElement("textarea");
     input.placeholder = placeholder;
     input.value = task;
+    input.rows = 1;
 
     const select = document.createElement("select");
     select.innerHTML = pomodoroSelectHTML(clampPoms(poms));
@@ -507,7 +538,37 @@
     });
 
     select.addEventListener("change", () => { updatePlanStats(); scheduleSave(); });
-    input.addEventListener("input", () => { updatePlanStats(); scheduleSave(); });
+
+    input.addEventListener("input", () => {
+      autoGrowTextarea(input);
+      updatePlanStats();
+      scheduleSave();
+    });
+
+    // ✅ FIX 2: ESC raus + Ctrl/Cmd+Enter neue Aufgabe
+    input.addEventListener("keydown", (e) => {
+      // Esc = raus
+      if (e.code === "Escape") {
+        e.preventDefault();
+        input.blur();
+        startPauseBtn.focus();
+        return;
+      }
+
+      // Ctrl+Enter / Cmd+Enter = neue Aufgabe hinzufügen
+      if ((e.ctrlKey || e.metaKey) && (e.code === "Enter" || e.key === "Enter")) {
+        e.preventDefault();
+        if (row.dataset.isFrog === "1") return;
+
+        const currentTasks = getTaskRows().filter(r => !r.isFrog).length;
+        createTaskRow({placeholder:`Aufgabe ${currentTasks + 1}`, task:"", poms:1});
+        renumberTaskPlaceholders();
+        updatePlanStats();
+        scheduleSave();
+        focusLastTaskField();
+        return;
+      }
+    });
 
     btnWrap.appendChild(badge);
     btnWrap.appendChild(delBtn);
@@ -517,11 +578,14 @@
     row.appendChild(btnWrap);
 
     taskContainer.appendChild(row);
+
+    // initial auto-grow
+    autoGrowTextarea(input);
   }
 
   function getTaskRows(){
     return Array.from(taskContainer.querySelectorAll(".taskRow")).map(row => {
-      const input = row.querySelector("input");
+      const input = row.querySelector("textarea");
       const select = row.querySelector("select");
       return {
         isFrog: row.dataset.isFrog === "1",
@@ -533,7 +597,6 @@
     });
   }
 
-  // wie viele Pomodori sind wirklich "belegt" (Text vorhanden)
   function getFilledPomodoros(){
     const rows = getTaskRows();
     const frog = rows.find(r => r.isFrog);
@@ -600,18 +663,14 @@
     scheduleSave();
   }
 
-  // ✅ FIX: Anzeige niemals "cappen" – wenn du 12 belegst, steht da 12/6 (und Banner warnt)
   function updatePlanStats(){
-    const rec = getEnergyRecommendation(); // echte Empfehlung
-    const target = getTargetPomodoros();   // Ziel für Zeit (override möglich)
-    const filled = getFilledPomodoros();   // belegt durch Text (kann > rec sein)
+    const rec = getEnergyRecommendation();
+    const target = getTargetPomodoros();
+    const filled = getFilledPomodoros();
 
     recommendedPill.textContent = rec;
     plannedPill.textContent = `${filled}/${rec}`;
 
-    // Zeitlogik:
-    // - Wenn etwas belegt ist, berechne Zeit daraus (du planst faktisch so viel)
-    // - Sonst: berechne Zeit aus target (damit man "ich will 2h" via override sehen kann)
     const effectiveForTime = (filled > 0) ? filled : target;
 
     const focusMins = effectiveForTime * 25;
@@ -624,28 +683,23 @@
     const rows = getTaskRows();
     const frogRow = rows.find(r => r.isFrog);
 
-    // Frog-Warnung (Design bleibt)
     if(frogRow && frogRow.task.length === 0){
       planWarn.className = "banner bad show";
       planWarn.innerHTML = `<strong>⚠️ Frog fehlt</strong><div class="muted">Trag deinen Frog ein – sonst ist „Eat That Frog“ nicht aktiv.</div>`;
-      // kein return -> darunter kann trotzdem eine Plan-Warnung kommen, falls du überplanst
     }
 
-    // ✅ NEU: Überplanung-Warnung (wenn belegt > Empfehlung)
     if(filled > rec){
       planWarn.className = "banner warn show";
       planWarn.innerHTML = `<strong>⚠️ Du planst mehr als empfohlen</strong><div class="muted">Empfehlung: ${rec}. Geplant: ${filled}. Das ist okay – Pausen bitte wirklich einhalten.</div>`;
       return;
     }
 
-    // Wenn nichts belegt: trotzdem "ok" + Timer-Hinweis
     if(filled === 0){
       planWarn.className = "banner good show";
       planWarn.innerHTML = `<strong>✅ Sieht gut aus</strong><div class="muted">Du kannst den Timer auch ohne Aufgaben nutzen (unbegrenzt, inkl. Pausen).</div>`;
       return;
     }
 
-    // passt:
     planWarn.className = "banner good show";
     planWarn.innerHTML = `<strong>✅ Sieht gut aus</strong><div class="muted">Pausen einhalten – nach 4 Pomodori kommt eine lange Pause.</div>`;
   }
@@ -1042,6 +1096,7 @@
     renumberTaskPlaceholders();
     updatePlanStats();
     scheduleSave();
+    focusLastTaskField();
   });
 
   buildPlanBtn.addEventListener("click", buildPlan);
@@ -1055,15 +1110,35 @@
   skipBtn.addEventListener("click", skipPhase);
   resetBtn.addEventListener("click", resetAll);
 
-  document.addEventListener("keydown", (e) => {
-    const key = e.key.toLowerCase();
-    if(key === " " || key === "spacebar"){
+  // ✅ FIX 1: robuste globale Shortcuts (Space/R/S) + capture=true
+  window.addEventListener("keydown", (e) => {
+    const t = e.target;
+
+    // Wenn du gerade tippst: keine globalen Shortcuts
+    const isTypingField =
+      t &&
+      (t.tagName === "INPUT" ||
+       t.tagName === "TEXTAREA" ||
+       t.tagName === "SELECT" ||
+       t.isContentEditable);
+
+    if (isTypingField) return;
+
+    // Robuster als e.key: e.code
+    if (e.code === "Space") {
       e.preventDefault();
       toggleTimer();
+      return;
     }
-    if(key === "r") resetAll();
-    if(key === "s") skipPhase();
-  });
+    if (e.code === "KeyR") {
+      resetAll();
+      return;
+    }
+    if (e.code === "KeyS") {
+      skipPhase();
+      return;
+    }
+  }, true);
 
   const saved = loadState();
   if(!applyState(saved)){
