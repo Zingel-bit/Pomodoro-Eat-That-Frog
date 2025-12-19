@@ -1,0 +1,1016 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pomodoro Planner</title>
+  <style>
+    :root{
+      --bg:#0b0f17; --card:#121a2a; --muted:#9bb0d0; --text:#e7efff;
+      --accent:#6aa9ff; --good:#46e6b2; --warn:#ffd36a; --bad:#ff6a6a;
+      --line:rgba(231,239,255,0.10); --shadow:0 10px 30px rgba(0,0,0,.35);
+      --radius:16px;
+    }
+    body{
+      margin:0;
+      background: radial-gradient(1200px 700px at 30% -10%, rgba(106,169,255,.25), transparent 60%),
+                  radial-gradient(900px 600px at 90% 10%, rgba(70,230,178,.14), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      line-height:1.35;
+    }
+    .wrap{max-width:1100px;margin:32px auto;padding:0 16px 60px;}
+    h1{font-size:28px;margin:0 0 6px;letter-spacing:.2px;}
+    .sub{color:var(--muted);margin:0 0 14px;}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;}
+    @media (max-width: 900px){.grid{grid-template-columns:1fr;}}
+
+    .card{
+      background:rgba(18,26,42,.92);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:16px;
+    }
+    .card h2{font-size:16px;margin:0 0 12px;color:#dbe7ff;}
+
+    label{display:block;font-size:13px;color:var(--muted);margin:10px 0 6px;}
+    input[type="text"], select{
+      width:100%; box-sizing:border-box;
+      border-radius:12px; border:1px solid var(--line);
+      background:rgba(11,15,23,.55); color:var(--text);
+      padding:10px 12px; outline:none;
+    }
+
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    @media (max-width: 540px){.row2{grid-template-columns:1fr;}}
+
+    .pill{
+      display:inline-flex;gap:8px;align-items:center;
+      padding:8px 10px;border-radius:999px;border:1px solid var(--line);
+      background:rgba(11,15,23,.35);color:var(--muted);font-size:13px;
+      margin-right:8px;margin-bottom:8px;
+    }
+    .pill b{color:var(--text);font-weight:800;}
+
+    .btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;}
+    button{
+      border:1px solid var(--line);
+      background:rgba(11,15,23,.35);
+      color:var(--text);
+      padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:800;
+    }
+    button:hover{border-color:rgba(231,239,255,.22);}
+    button.primary{
+      background:linear-gradient(180deg, rgba(106,169,255,.35), rgba(106,169,255,.18));
+      border-color:rgba(106,169,255,.45);
+    }
+    button.good{
+      background:linear-gradient(180deg, rgba(70,230,178,.26), rgba(70,230,178,.12));
+      border-color:rgba(70,230,178,.40);
+    }
+    button.bad{
+      background:linear-gradient(180deg, rgba(255,106,106,.22), rgba(255,106,106,.10));
+      border-color:rgba(255,106,106,.35);
+    }
+
+    .timerBox{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center;}
+    @media (max-width: 540px){.timerBox{grid-template-columns:1fr;}}
+    .bigTime{font-size:54px;font-weight:900;letter-spacing:1px;margin:0;}
+    .status{
+      display:flex;flex-direction:column;gap:6px;
+      padding:12px;border-radius:14px;border:1px solid var(--line);
+      background:rgba(11,15,23,.35);
+    }
+    .status small{color:var(--muted);}
+    .status .mode{font-weight:900;font-size:14px;}
+    .muted{color:var(--muted);}
+
+    .banner{
+      padding:10px 12px;border-radius:14px;border:1px solid var(--line);
+      background:rgba(11,15,23,.35);margin-top:12px;display:none;
+    }
+    .banner.show{display:block;}
+    .banner.good{border-color:rgba(70,230,178,.45);}
+    .banner.warn{border-color:rgba(255,211,106,.45);}
+    .banner.bad{border-color:rgba(255,106,106,.45);}
+    .banner strong{display:block;margin-bottom:6px;}
+
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size:12px;padding:2px 6px;border:1px solid var(--line);
+      border-radius:8px;background:rgba(11,15,23,.35);color:var(--muted);
+    }
+
+    .taskRow{
+      display:grid;
+      grid-template-columns: 1fr 160px 90px;
+      gap:10px;
+      align-items:center;
+      margin-bottom:10px;
+    }
+    @media (max-width: 700px){
+      .taskRow{grid-template-columns: 1fr 1fr; grid-auto-rows:auto;}
+      .taskRow .col3{grid-column: 1 / -1;}
+    }
+    .miniBtn{
+      padding:10px 10px;
+      border-radius:12px;
+      font-weight:900;
+      min-width:44px;
+    }
+
+    .planList{margin:0;padding-left:18px;color:#dbe7ff;}
+    .planList li{margin:6px 0;}
+
+    .checks{
+      display:flex;
+      gap:14px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(11,15,23,.35);
+    }
+    .checks label{
+      margin:0;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      color:var(--text);
+      font-size:13px;
+    }
+    .checks input[type="checkbox"]{
+      width:18px;height:18px;
+      accent-color: #6aa9ff;
+    }
+
+    .explainBox h3{margin:0 0 10px;color:#dbe7ff;}
+    .explainBox p{margin:10px 0;color:#dbe7ff;line-height:1.55;}
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+  <h1>Pomodoro Planner</h1>
+  <p class="sub">Belohne Energie - nicht das Ergebnis. Du verteilst Pomodori pro Aufgabe. Fokuszeit & Gesamtzeit werden automatisch berechnet.</p>
+
+  <div class="card">
+    <button id="toggleExplain" class="primary" style="width:100%; text-align:left;">
+      ℹ️ Wie funktioniert dieses Tool?
+    </button>
+
+    <div id="explainBox" class="explainBox" style="display:none; margin-top:14px;">
+      <h3>Lernen mit Eat the Frog & Pomodoro</h3>
+
+      <p>
+        Dieses Programm kombiniert zwei bewährte Lernprinzipien, um Fokus, Motivation und Nachhaltigkeit zu fördern.
+      </p>
+
+      <p><strong>Eat the Frog bedeutet:</strong><br>
+        Beginne deinen Lerntag mit der wichtigsten oder schwierigsten Aufgabe. Genau die Aufgabe, die du sonst aufschieben würdest.
+        Wenn diese zuerst erledigt ist, sinkt der mentale Druck – der Rest des Tages fühlt sich leichter an und Fortschritt wird sofort spürbar.
+      </p>
+
+      <p><strong>Pomodoro sorgt dafür, dass Lernen machbar bleibt:</strong><br>
+        Du arbeitest in klaren Zeitblöcken (25 Minuten), gefolgt von kurzen Pausen.
+        Der Fokus liegt nicht auf „alles schaffen“, sondern auf konzentriertem Arbeiten für eine begrenzte Zeit.
+        Pausen sind dabei kein Verlust, sondern Teil des Systems.
+      </p>
+
+      <p><strong>Zusammen heißt das:</strong><br>
+        Du belohnst nicht das Ergebnis, sondern den Einsatz. Jede abgeschlossene Lerneinheit ist ein Erfolg.
+        Statt Überforderung entsteht Struktur, statt Aufschieben Bewegung.
+      </p>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>1) Tages-Setup</h2>
+
+      <div class="row2">
+        <div>
+          <label for="energy">Energielevel</label>
+          <select id="energy">
+            <option value="very_low">Sehr niedrig</option>
+            <option value="low">Niedrig</option>
+            <option value="normal" selected>Normal</option>
+            <option value="good">Gut</option>
+            <option value="very_good">Sehr gut</option>
+            <option value="beast">Es muss richtig los</option>
+          </select>
+        </div>
+        <div>
+          <label for="override">Override (optional)</label>
+          <select id="override">
+            <option value="">Automatisch nach Energie</option>
+            <option value="2">2 Pomodori</option>
+            <option value="4">4 Pomodori</option>
+            <option value="6">6 Pomodori</option>
+            <option value="8">8 Pomodori</option>
+            <option value="10">10 Pomodori</option>
+            <option value="12">12 Pomodori</option>
+            <option value="14">14 Pomodori</option>
+            <option value="16">16 Pomodori</option>
+            <option value="18">18 Pomodori</option>
+            <option value="20">20 Pomodori</option>
+          </select>          
+        </div>
+      </div>
+
+      <div style="margin-top:14px;">
+        <span class="pill">Empfohlen: <b id="recommendedPill">—</b> Pomodori</span>
+        <span class="pill">Geplant: <b id="plannedPill">—</b></span>
+        <span class="pill">Fokuszeit: <b id="focusPill">—</b></span>
+        <span class="pill">Gesamt grob: <b id="totalPill">—</b></span>
+      </div>
+
+      <div class="banner warn" id="planWarn"></div>
+
+      <h2 style="margin-top:16px;">2) Aufgaben</h2>
+
+
+      <div id="taskContainer"></div>
+
+      <div class="btns">
+        <button class="good" id="addTaskBtn">+ Aufgabe hinzufügen</button>
+        <button class="primary" id="buildPlanBtn">Plan erstellen</button>
+        <button class="bad" id="resetFormBtn">Alles leeren</button>
+      </div>
+
+      <div class="banner good" id="builtBanner">
+        <strong>✅ Plan erstellt</strong>
+        <div class="muted">Timer kann starten.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3) Timer & Alerts</h2>
+
+      <div class="checks">
+        <label><input type="checkbox" id="blinkEnabled" checked /> Blinken</label>
+        <label><input type="checkbox" id="soundEnabled" checked /> Sound</label>
+      </div>
+
+      <div class="timerBox" style="margin-top:12px;">
+        <div>
+          <p class="bigTime" id="timeDisplay">25:00</p>
+          <div class="muted">Shortcuts: <span class="kbd">Space</span> Start/Pause · <span class="kbd">R</span> Reset · <span class="kbd">S</span> Skip</div>
+        </div>
+        <div class="status">
+          <small>Status</small>
+          <div class="mode" id="modeDisplay">Bereit</div>
+          <div class="muted" id="progressDisplay">Pomodoro 0 / 0</div>
+          <div class="muted" id="taskNow">Aufgabe: —</div>
+        </div>
+      </div>
+
+      <div class="btns">
+        <button class="good" id="startPauseBtn">Start</button>
+        <button id="skipBtn">Skip</button>
+        <button class="bad" id="resetBtn">Reset</button>
+      </div>
+
+      <div class="banner warn" id="rewardBanner">
+        <strong id="rewardTitle">🎉</strong>
+        <div id="rewardText" class="muted">—</div>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <h2>4) Pomodoro-Liste</h2>
+        <div class="muted" id="planHint">Erstelle links deinen Plan. Dann erscheint hier die Pomodoro-Liste.</div>
+        <ol class="planList" id="planList"></ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="flashOverlay" style="
+  position:fixed; inset:0; pointer-events:none; opacity:0;
+  background:rgba(255,255,255,0.35); transition:opacity 120ms;
+"></div>
+
+<script>
+(() => {
+  const STORAGE_KEY = "etf_pomodoro_v1";
+
+  const ENERGY_TO_RECOMMENDED = {
+    very_low: 2,
+    low: 3,
+    normal: 4,
+    good: 6,
+    very_good: 8,
+    beast: 10
+  };
+
+  const WORK_SEC = 25 * 60;
+  const SHORT_BREAK_SEC = 5 * 60;
+  const LONG_BREAK_SEC = 30 * 60;
+
+  // dropdown max (UI)
+  const MAX_POMS_PER_TASK = 8;
+
+  let plan = [];
+  let totalPomodori = 0;
+  let completedPomodori = 0;
+  let currentIndex = 0;
+  let phase = "idle";
+  let secondsLeft = WORK_SEC;
+  let intervalId = null;
+  let isRunning = false;
+
+  // Debounced persistence
+  let saveTimer = null;
+  const scheduleSave = () => {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveState, 250);
+  };
+
+  // Explain toggle
+  const toggleExplain = document.getElementById("toggleExplain");
+  const explainBox = document.getElementById("explainBox");
+
+  const energyEl = document.getElementById("energy");
+  const overrideEl = document.getElementById("override");
+
+  const recommendedPill = document.getElementById("recommendedPill");
+  const plannedPill = document.getElementById("plannedPill");
+  const focusPill = document.getElementById("focusPill");
+  const totalPill = document.getElementById("totalPill");
+  const planWarn = document.getElementById("planWarn");
+
+  const taskContainer = document.getElementById("taskContainer");
+  const addTaskBtn = document.getElementById("addTaskBtn");
+  const buildPlanBtn = document.getElementById("buildPlanBtn");
+  const resetFormBtn = document.getElementById("resetFormBtn");
+  const builtBanner = document.getElementById("builtBanner");
+
+  const timeDisplay = document.getElementById("timeDisplay");
+  const modeDisplay = document.getElementById("modeDisplay");
+  const progressDisplay = document.getElementById("progressDisplay");
+  const taskNow = document.getElementById("taskNow");
+  const planListEl = document.getElementById("planList");
+  const planHint = document.getElementById("planHint");
+
+  const startPauseBtn = document.getElementById("startPauseBtn");
+  const skipBtn = document.getElementById("skipBtn");
+  const resetBtn = document.getElementById("resetBtn");
+
+  const rewardBanner = document.getElementById("rewardBanner");
+  const rewardTitle = document.getElementById("rewardTitle");
+  const rewardText = document.getElementById("rewardText");
+
+  // Alert toggles
+  const blinkEnabledEl = document.getElementById("blinkEnabled");
+  const soundEnabledEl = document.getElementById("soundEnabled");
+
+  // --- Alert (Flash + Sound) ---
+  const flashOverlay = document.getElementById("flashOverlay");
+
+  function clampPoms(n){
+    const x = parseInt(n, 10);
+    if (Number.isNaN(x)) return 1;
+    return Math.max(1, Math.min(MAX_POMS_PER_TASK, x));
+  }
+
+  function flashScreen(times = 1) {
+    if (!flashOverlay) return;
+    if (!blinkEnabledEl.checked) return;
+
+    let i = 0;
+    const blink = () => {
+      flashOverlay.style.opacity = "1";
+      setTimeout(() => {
+        flashOverlay.style.opacity = "0";
+        i++;
+        if (i < times) setTimeout(blink, 160);
+      }, 160);
+    };
+    blink();
+  }
+
+  function playBeep() {
+    if (!soundEnabledEl.checked) return;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+
+      const ctx = new AudioCtx();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+
+      o.type = "sine";
+      o.frequency.value = 880;
+      g.gain.value = 0.0001;
+
+      o.connect(g);
+      g.connect(ctx.destination);
+
+      o.start();
+
+      const now = ctx.currentTime;
+      g.gain.exponentialRampToValueAtTime(0.2, now + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+
+      o.stop(now + 0.25);
+      setTimeout(() => ctx.close(), 350);
+    } catch (e) {}
+  }
+
+  // REQUIRED:
+  // - work end: blink 2x
+  // - break end: blink 1x
+  function alertPhaseEnd(endedPhase) {
+    if (!blinkEnabledEl.checked && !soundEnabledEl.checked) return;
+
+    if (endedPhase === "work") {
+      flashScreen(2);
+      playBeep();
+    } else if (endedPhase === "short_break" || endedPhase === "long_break") {
+      flashScreen(1);
+      playBeep();
+    } else {
+      flashScreen(1);
+      playBeep();
+    }
+  }
+
+  function fmtTime(s){
+    const m = Math.floor(s/60);
+    const r = s % 60;
+    return String(m).padStart(2,"0")+":"+String(r).padStart(2,"0");
+  }
+  function showBanner(el, show=true){
+    if(show) el.classList.add("show");
+    else el.classList.remove("show");
+  }
+  function getRecommendedPomodoros(){
+    const ov = overrideEl.value;
+    if(ov) return parseInt(ov,10);
+    return ENERGY_TO_RECOMMENDED[energyEl.value] ?? 4;
+  }
+
+  function pomodoroSelectHTML(selected){
+    let opts = "";
+    for(let i=1;i<=MAX_POMS_PER_TASK;i++){
+      opts += `<option value="${i}" ${i===selected ? "selected":""}>${i} Pomodori</option>`;
+    }
+    return opts;
+  }
+
+  function createTaskRow({label="", placeholder="", task="", poms=1, locked=false, isFrog=false}){
+    const row = document.createElement("div");
+    row.className = "taskRow";
+    row.dataset.locked = locked ? "1" : "0";
+    row.dataset.isFrog = isFrog ? "1" : "0";
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = placeholder;
+    input.value = task;
+
+    const select = document.createElement("select");
+    select.innerHTML = pomodoroSelectHTML(clampPoms(poms));
+
+    const btnWrap = document.createElement("div");
+    btnWrap.className = "col3";
+    btnWrap.style.display = "flex";
+    btnWrap.style.gap = "10px";
+    btnWrap.style.justifyContent = "flex-end";
+
+    const badge = document.createElement("div");
+    badge.className = "muted";
+    badge.style.alignSelf = "center";
+    badge.style.fontSize = "12px";
+    badge.style.flex = "1";
+    badge.textContent = label;
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "miniBtn bad";
+    delBtn.type = "button";
+    delBtn.textContent = "–";
+    delBtn.title = "Aufgabe entfernen";
+    delBtn.disabled = locked;
+
+    delBtn.addEventListener("click", () => {
+      row.remove();
+      renumberTaskPlaceholders();
+      updatePlanStats();
+      scheduleSave();
+    });
+
+    select.addEventListener("change", () => { updatePlanStats(); scheduleSave(); });
+    input.addEventListener("input", () => { updatePlanStats(); scheduleSave(); });
+
+    btnWrap.appendChild(badge);
+    btnWrap.appendChild(delBtn);
+
+    row.appendChild(input);
+    row.appendChild(select);
+    row.appendChild(btnWrap);
+
+    taskContainer.appendChild(row);
+  }
+
+  function getTaskRows(){
+    return Array.from(taskContainer.querySelectorAll(".taskRow")).map(row => {
+      const input = row.querySelector("input");
+      const select = row.querySelector("select");
+      return {
+        isFrog: row.dataset.isFrog === "1",
+        input,
+        task: (input?.value ?? "").trim(),
+        poms: clampPoms(select?.value ?? "1"),
+        rowEl: row
+      };
+    });
+  }
+
+  function calcPlannedPomodoros(){
+    const rows = getTaskRows();
+    let total = 0;
+    for(const r of rows){
+      if(r.task.length === 0) continue;
+      total += r.poms;
+    }
+    return total;
+  }
+
+  function estimateTotalMinutes(poms){
+    const work = poms * 25;
+    const shortBreaks = Math.max(0, (poms - 1)) * 5;
+
+    const longBreaksCount = Math.floor(poms / 4);
+    const endsOnCycle = (poms % 4 === 0);
+    const effectiveLongBreaks = endsOnCycle ? Math.max(0, longBreaksCount - 1) : longBreaksCount;
+    const longBreaks = effectiveLongBreaks * 30;
+
+    return work + shortBreaks + longBreaks;
+  }
+
+  function formatMinutes(mins){
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return (h ? `${h}h ` : "") + `${m}min`;
+  }
+
+  function renumberTaskPlaceholders(){
+    const rows = getTaskRows().filter(r => !r.isFrog);
+    rows.forEach((r, idx) => {
+      r.input.placeholder = `Aufgabe ${idx + 1}`;
+    });
+  }
+
+  function syncTaskRowsToEnergy(){
+    const target = getRecommendedPomodoros();
+    const rows = getTaskRows();
+    const tasks = rows.filter(r => !r.isFrog);
+
+    while(tasks.length < target){
+      createTaskRow({placeholder:`Aufgabe ${tasks.length + 1}`, task:"", poms:1});
+      tasks.push({});
+    }
+
+    let currentTasks = getTaskRows().filter(r => !r.isFrog);
+    while(currentTasks.length > target){
+      const last = currentTasks[currentTasks.length - 1];
+      if((last.input?.value ?? "").trim().length === 0){
+        last.rowEl.remove();
+        currentTasks = getTaskRows().filter(r => !r.isFrog);
+      } else {
+        break;
+      }
+    }
+
+    renumberTaskPlaceholders();
+    updatePlanStats();
+    scheduleSave();
+  }
+
+  function updatePlanStats(){
+    const rec = getRecommendedPomodoros();
+    const planned = calcPlannedPomodoros();
+
+    recommendedPill.textContent = rec;
+    plannedPill.textContent = planned ? planned : "—";
+
+    if(planned){
+      const focusMins = planned * 25;
+      const totalMins = estimateTotalMinutes(planned);
+      focusPill.textContent = formatMinutes(focusMins);
+      totalPill.textContent = formatMinutes(totalMins);
+    } else {
+      focusPill.textContent = "—";
+      totalPill.textContent = "—";
+    }
+
+    showBanner(planWarn, false);
+
+    const frogRow = getTaskRows().find(r => r.isFrog);
+    if(frogRow && frogRow.task.length === 0){
+      planWarn.className = "banner bad show";
+      planWarn.innerHTML = `<strong>⚠️ Frog fehlt</strong><div class="muted">Trag deinen Frog ein – sonst ist „Eat That Frog“ nicht aktiv.</div>`;
+      return;
+    }
+
+    if(planned === 0){
+      planWarn.className = "banner warn show";
+      planWarn.innerHTML = `<strong>Hinweis</strong><div class="muted">Trag Aufgaben ein und verteile Pomodori. Dann „Plan erstellen“.</div>`;
+      return;
+    }
+
+    if(planned > rec){
+      planWarn.className = "banner warn show";
+      planWarn.innerHTML = `<strong>⚠️ Du planst mehr als empfohlen</strong><div class="muted">Empfehlung: ${rec}. Geplant: ${planned}. Das ist okay – Pausen bitte wirklich einhalten.</div>`;
+      return;
+    }
+
+    planWarn.className = "banner good show";
+    planWarn.innerHTML = `<strong>✅ Sieht gut aus</strong><div class="muted">${planned}/${rec} Pomodori geplant.</div>`;
+  }
+
+  function renderPlanList(){
+    planListEl.innerHTML = "";
+    if(!plan.length){
+      planHint.style.display = "block";
+      return;
+    }
+    planHint.style.display = "none";
+    plan.forEach((t,i) => {
+      const li = document.createElement("li");
+      const mark = (i < completedPomodori) ? "✅ " : "";
+      li.textContent = mark + t;
+      planListEl.appendChild(li);
+    });
+  }
+
+  function currentTaskLabel(){
+    if(phase === "work"){
+      const t = plan[currentIndex] ?? "—";
+      return `Aufgabe: ${t}`;
+    }
+    if(phase === "short_break") return "Aufgabe: Pause (kurz)";
+    if(phase === "long_break") return "Aufgabe: Pause (lang)";
+    if(phase === "done") return "Aufgabe: Fertig – Feierabendmodus 😌";
+    return "Aufgabe: —";
+  }
+
+  function stopTimer(){
+    isRunning = false;
+    startPauseBtn.textContent = "Start";
+    if(intervalId){
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+  }
+
+  function setPhase(newPhase){
+    phase = newPhase;
+    showBanner(rewardBanner, false);
+
+    if(phase === "idle"){
+      modeDisplay.textContent = "Bereit";
+      secondsLeft = WORK_SEC;
+    } else if(phase === "work"){
+      modeDisplay.textContent = "Fokus (25 min)";
+      secondsLeft = WORK_SEC;
+    } else if(phase === "short_break"){
+      modeDisplay.textContent = "Kurze Pause (5 min)";
+      secondsLeft = SHORT_BREAK_SEC;
+    } else if(phase === "long_break"){
+      modeDisplay.textContent = "Lange Pause (30 min)";
+      secondsLeft = LONG_BREAK_SEC;
+    } else if(phase === "done"){
+      modeDisplay.textContent = "Abgeschlossen";
+      secondsLeft = 0;
+      stopTimer();
+      startPauseBtn.textContent = "Start";
+    }
+
+    timeDisplay.textContent = fmtTime(secondsLeft);
+    taskNow.textContent = currentTaskLabel();
+    progressDisplay.textContent = `Pomodoro ${completedPomodori} / ${totalPomodori}`;
+  }
+
+  function startTimer(){
+    if(isRunning) return;
+    if(!totalPomodori) return;
+
+    isRunning = true;
+    startPauseBtn.textContent = "Pause";
+
+    if(phase === "idle") setPhase("work");
+
+    intervalId = window.setInterval(() => {
+      if(secondsLeft <= 0){
+        onPhaseComplete();
+        return;
+      }
+      secondsLeft -= 1;
+      timeDisplay.textContent = fmtTime(secondsLeft);
+    }, 1000);
+  }
+
+  function toggleTimer(){
+    if(!totalPomodori) return;
+    if(isRunning) stopTimer();
+    else startTimer();
+  }
+
+  function celebrateLongBreak(){
+    rewardTitle.textContent = "🎉 Zyklus geschafft!";
+    rewardText.textContent = "Belohnung: 30 Minuten echte Pause.";
+    showBanner(rewardBanner, true);
+  }
+
+  function celebrateFinish(){
+    rewardTitle.textContent = "🏁 Tagesziel erreicht!";
+    rewardText.textContent = "Der Frosch ist gegessen. Konsistenz zählt – nicht Perfektion.";
+    showBanner(rewardBanner, true);
+  }
+
+  function onPhaseComplete(){
+    alertPhaseEnd(phase);
+
+    if(phase === "work"){
+      completedPomodori += 1;
+      currentIndex += 1;
+      renderPlanList();
+
+      const isDone = (completedPomodori >= totalPomodori);
+      if(isDone){
+        celebrateFinish();
+        setPhase("done");
+        return;
+      }
+
+      const hitCycle = (completedPomodori % 4 === 0);
+      if(hitCycle){
+        celebrateLongBreak();
+        setPhase("long_break");
+      } else {
+        setPhase("short_break");
+      }
+      taskNow.textContent = currentTaskLabel();
+      return;
+    }
+
+    if(phase === "short_break"){
+      setPhase("work");
+      taskNow.textContent = currentTaskLabel();
+      return;
+    }
+
+    if(phase === "long_break"){
+      setPhase("work");
+      taskNow.textContent = currentTaskLabel();
+      return;
+    }
+  }
+
+  function skipPhase(){
+    if(!totalPomodori) return;
+    secondsLeft = 0;
+    timeDisplay.textContent = fmtTime(secondsLeft);
+    onPhaseComplete();
+  }
+
+  function resetAll(){
+    stopTimer();
+    completedPomodori = 0;
+    currentIndex = 0;
+    setPhase("idle");
+    renderPlanList();
+    showBanner(rewardBanner, false);
+    progressDisplay.textContent = `Pomodoro 0 / ${totalPomodori}`;
+  }
+
+  function buildPlan(){
+    const rows = getTaskRows();
+    const frog = rows.find(r => r.isFrog);
+
+    updatePlanStats();
+    if(!frog || frog.task.length === 0) return;
+
+    const expanded = [];
+
+    for(let i=1;i<=frog.poms;i++){
+      expanded.push(`🐸 Frog (${i}/${frog.poms}): ${frog.task}`);
+    }
+
+    for(const r of rows){
+      if(r.isFrog) continue;
+      if(r.task.length === 0) continue;
+      for(let i=1;i<=r.poms;i++){
+        expanded.push(`${r.task} (${i}/${r.poms})`);
+      }
+    }
+
+    plan = expanded;
+    totalPomodori = plan.length;
+
+    resetAll();
+    renderPlanList();
+
+    showBanner(builtBanner, true);
+    setTimeout(() => showBanner(builtBanner, false), 2500);
+
+    scheduleSave();
+  }
+
+  function clearSavedState(){
+    try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+  }
+
+  function resetForm({keepEnergy=false} = {}){
+    const prevEnergy = energyEl.value;
+    const prevOverride = overrideEl.value;
+
+    taskContainer.innerHTML = "";
+
+    createTaskRow({
+      label:"Fix: Frosch zuerst",
+      placeholder:"Dein Frosch für den Tag:",
+      task:"",
+      poms:2,
+      locked:true,
+      isFrog:true
+    });
+
+    const target = getRecommendedPomodoros();
+    for(let i=1;i<=target;i++){
+      createTaskRow({placeholder:`Aufgabe ${i}`, task:"", poms:1});
+    }
+
+    if(keepEnergy){
+      energyEl.value = prevEnergy;
+      overrideEl.value = prevOverride;
+    }
+
+    plan = [];
+    totalPomodori = 0;
+    resetAll();
+    renumberTaskPlaceholders();
+    updatePlanStats();
+    scheduleSave();
+  }
+
+  // --- LocalStorage: Save + Load ---
+  function saveState(){
+    try{
+      const rows = getTaskRows();
+      const frog = rows.find(r => r.isFrog);
+      const tasks = rows.filter(r => !r.isFrog).map(r => ({
+        text: r.task,
+        poms: r.poms
+      }));
+
+      const state = {
+        v: 1,
+        energy: energyEl.value,
+        override: overrideEl.value,
+        blink: !!blinkEnabledEl.checked,
+        sound: !!soundEnabledEl.checked,
+        explainOpen: (explainBox.style.display === "block"),
+        frog: {
+          text: frog ? frog.task : "",
+          poms: frog ? frog.poms : 2
+        },
+        tasks
+      };
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch(e) {
+      // ignore
+    }
+  }
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return null;
+      const data = JSON.parse(raw);
+      if(!data || data.v !== 1) return null;
+      return data;
+    } catch(e){
+      return null;
+    }
+  }
+
+  function applyState(data){
+    if(!data) return false;
+
+    // Basics first
+    if (data.energy && ENERGY_TO_RECOMMENDED[data.energy] !== undefined) {
+      energyEl.value = data.energy;
+    }
+    overrideEl.value = (typeof data.override === "string") ? data.override : "";
+
+    blinkEnabledEl.checked = (data.blink !== false);
+    soundEnabledEl.checked = (data.sound !== false);
+
+    // Explain open state
+    if (data.explainOpen) {
+      explainBox.style.display = "block";
+      toggleExplain.textContent = "✖ Erklärung ausblenden";
+    } else {
+      explainBox.style.display = "none";
+      toggleExplain.textContent = "ℹ️ Wie funktioniert dieses Tool?";
+    }
+
+    // Rebuild task UI from saved rows
+    taskContainer.innerHTML = "";
+
+    createTaskRow({
+      label:"Fix: Frosch zuerst",
+      placeholder:"Dein Frosch für den Tag:",
+      task: (data.frog?.text ?? ""),
+      poms: clampPoms(data.frog?.poms ?? 2),
+      locked:true,
+      isFrog:true
+    });
+
+    const savedTasks = Array.isArray(data.tasks) ? data.tasks : [];
+    if (savedTasks.length > 0) {
+      savedTasks.forEach((t, idx) => {
+        createTaskRow({
+          placeholder:`Aufgabe ${idx + 1}`,
+          task: (t?.text ?? ""),
+          poms: clampPoms(t?.poms ?? 1)
+        });
+      });
+    } else {
+      // fallback: default by energy/override
+      const target = getRecommendedPomodoros();
+      for(let i=1;i<=target;i++){
+        createTaskRow({placeholder:`Aufgabe ${i}`, task:"", poms:1});
+      }
+    }
+
+    renumberTaskPlaceholders();
+    updatePlanStats();
+    return true;
+  }
+
+  // Explain toggle with persistence
+  toggleExplain.addEventListener("click", () => {
+    const open = explainBox.style.display === "block";
+    explainBox.style.display = open ? "none" : "block";
+    toggleExplain.textContent = open ? "ℹ️ Wie funktioniert dieses Tool?" : "✖ Erklärung ausblenden";
+    scheduleSave();
+  });
+
+  // Events
+  energyEl.addEventListener("change", syncTaskRowsToEnergy);
+  overrideEl.addEventListener("change", syncTaskRowsToEnergy);
+
+  blinkEnabledEl.addEventListener("change", scheduleSave);
+  soundEnabledEl.addEventListener("change", scheduleSave);
+
+  addTaskBtn.addEventListener("click", () => {
+    const currentTasks = getTaskRows().filter(r => !r.isFrog).length;
+    createTaskRow({placeholder:`Aufgabe ${currentTasks + 1}`, task:"", poms:1});
+    renumberTaskPlaceholders();
+    updatePlanStats();
+    scheduleSave();
+  });
+
+  buildPlanBtn.addEventListener("click", buildPlan);
+
+  resetFormBtn.addEventListener("click", () => {
+    clearSavedState();
+    resetForm({keepEnergy:false});
+  });
+
+  startPauseBtn.addEventListener("click", toggleTimer);
+  skipBtn.addEventListener("click", skipPhase);
+  resetBtn.addEventListener("click", resetAll);
+
+  document.addEventListener("keydown", (e) => {
+    const key = e.key.toLowerCase();
+    if(key === " " || key === "spacebar"){
+      e.preventDefault();
+      toggleTimer();
+    }
+    if(key === "r") resetAll();
+    if(key === "s") skipPhase();
+  });
+
+  // Init: load saved state; fallback to defaults
+  const saved = loadState();
+  if(!applyState(saved)){
+    resetForm({keepEnergy:false});
+    setPhase("idle");
+    saveState();
+  } else {
+    setPhase("idle");
+    scheduleSave();
+  }
+})();
+</script>
+</body>
+</html>
